@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Todoist Clone + Expense Tracker
+
+A personal productivity app: Todoist-style task/project management plus a Vietnamese expense & investment tracker. Built with Next.js 16 (App Router) and Supabase.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm run build      # production build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Environment: copy `.env.example` to `.env.local`. If Supabase env vars are not set, the app falls back to an in-memory mock database with sample data (`src/lib/mock-db.ts`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Codebase Map
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/
+│   ├── (app)/                 # Authenticated shell (sidebar + top bar)
+│   │   ├── page.tsx           # Home / task list
+│   │   ├── today/             # Today view
+│   │   ├── upcoming/          # Upcoming view
+│   │   ├── project/[id]/      # Project page (list/board/calendar views)
+│   │   ├── labels/            # Labels management
+│   │   ├── filters/           # Saved filters
+│   │   └── expenses/          # Expense tracker + investments
+│   ├── (auth)/                # Login / signup
+│   └── layout.tsx             # Root layout + theme provider
+├── actions/                   # Server Actions ("use server") per domain
+│   ├── tasks.ts, projects.ts, sections.ts, labels.ts, comments.ts
+│   ├── categories.ts, transactions.ts, wallets.ts, people.ts
+│   ├── investments.ts, collaboration.ts
+├── components/
+│   ├── layout/                # App shell, sidebar, top bar
+│   ├── tasks/                 # Task list/item/form/detail, board & calendar views
+│   ├── projects/              # Project header (inline edit), members
+│   ├── sections/              # Section header, add-section form
+│   ├── expenses/              # Expense tracker UI
+│   ├── shared/                # Export button, display options menu
+│   ├── providers/             # ThemeProvider, DisplayProvider (view/sort/filter state)
+│   └── ui/                    # shadcn/ui primitives
+├── lib/
+│   ├── supabase/              # Server/browser clients (mock fallback)
+│   ├── mock-db.ts             # In-memory sample data for dev without Supabase
+│   └── utils/                 # task-filters, recurrence, export (CSV), cn
+├── types/database.ts          # All DB entity types
+└── middleware.ts              # Auth/session handling
 
-## Learn More
+supabase/migrations/           # SQL schema migrations (001..004)
+docs/specs/                    # Feature specs (see docs/specs/README.md)
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Key Conventions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Data flow**: Server Components fetch via Server Actions in `src/actions/`; mutations call `revalidatePath`.
+- **Client state**: view/sort/filter options live in `DisplayProvider` (`src/components/providers/display-provider.tsx`).
+- **Types**: all entities in `src/types/database.ts`; keep them in sync with migrations.
+- **Styling**: Tailwind v4 + shadcn/ui theme tokens (`oklch` vars in `src/app/globals.css`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Documentation
 
-## Deploy on Vercel
+- Feature specs: [`docs/specs/`](docs/specs/)
+- Architecture deep-dive (repowiki, IDE-generated): `.qoder/repowiki/en/content/`
+- Parallel feature development: [`.qoder/worktrees/`](../.qoder/worktrees/README.md)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Database
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run migrations in `supabase/migrations/` in order (001 schema → 002 seed → 003 multi-user → 004 descriptions).

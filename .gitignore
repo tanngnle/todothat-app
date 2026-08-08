@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# env template (safe to commit; .env* rule above ignores everything else)
+!.env.example
+
+# git worktrees created inside the repo
+/.qoder/worktrees/
+
+# stray temp artifacts
+__diff_temp.txt
