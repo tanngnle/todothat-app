@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { Label } from "@/types/database";
+import type { Label, Task } from "@/types/database";
 
 export async function getLabels(): Promise<Label[]> {
   const supabase = await createClient();
@@ -98,22 +98,27 @@ export async function deleteLabel(id: string): Promise<void> {
   revalidatePath("/");
 }
 
-export async function getTasksByLabel(labelName: string) {
+export async function getTasksByLabel(labelName: string, includeCompleted = false) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("tasks")
     .select("*")
     .eq("user_id", user.id)
-    .eq("is_completed", false)
     .order("sort_order", { ascending: true });
+
+  if (!includeCompleted) {
+    query = query.eq("is_completed", false);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
   // Filter tasks that contain the label
-  return (data || []).filter((task: any) =>
+  return (data || []).filter((task: Task) =>
     task.labels?.includes(labelName)
   );
 }

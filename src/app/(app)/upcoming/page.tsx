@@ -1,9 +1,13 @@
 import { getUpcomingTasks } from "@/actions/tasks";
+import { getProjects } from "@/actions/projects";
 import { UpcomingContent } from "@/components/tasks/upcoming-content";
-import { CalendarDays } from "lucide-react";
 
 export default async function UpcomingPage() {
-  const tasks = await getUpcomingTasks();
+  const tasks = await getUpcomingTasks(true);
+  const projects = await getProjects();
+  const projectNames = Object.fromEntries(
+    projects.map((p) => [p.id, p.name])
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
@@ -14,7 +18,7 @@ export default async function UpcomingPage() {
         </p>
       </div>
 
-      <UpcomingContent tasks={tasks} />
+      <UpcomingContent tasks={tasks} projectNames={projectNames} />
     </div>
   );
 }

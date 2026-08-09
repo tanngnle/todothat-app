@@ -5,7 +5,7 @@ import {
   DateFilter,
   PriorityFilter,
 } from "@/components/providers/display-provider";
-import { isToday, isTomorrow, isPast, isThisWeek, parseISO, addDays, startOfWeek, endOfWeek } from "date-fns";
+import { isToday, isTomorrow, isPast, isThisWeek, parseISO, addDays, endOfWeek } from "date-fns";
 
 export interface TaskGroup {
   id: string;
@@ -109,7 +109,11 @@ export function sortTasks(tasks: Task[], sorting: SortingOption): Task[] {
 /**
  * Group tasks based on grouping option
  */
-export function groupTasks(tasks: Task[], grouping: GroupingOption): TaskGroup[] {
+export function groupTasks(
+  tasks: Task[],
+  grouping: GroupingOption,
+  projectNames?: Record<string, string>
+): TaskGroup[] {
   switch (grouping) {
     case "priority": {
       const groups: TaskGroup[] = [
@@ -130,7 +134,6 @@ export function groupTasks(tasks: Task[], grouping: GroupingOption): TaskGroup[]
     }
 
     case "due_date": {
-      const today = new Date();
       const groups: TaskGroup[] = [
         { id: "overdue", title: "Overdue", tasks: [] },
         { id: "today", title: "Today", tasks: [] },
@@ -203,7 +206,7 @@ export function groupTasks(tasks: Task[], grouping: GroupingOption): TaskGroup[]
 
       return Array.from(projectMap.entries()).map(([projectId, tasks]) => ({
         id: projectId,
-        title: `Project ${projectId.slice(0, 8)}`,
+        title: projectNames?.[projectId] ?? "Unknown project",
         tasks,
       }));
     }
@@ -225,6 +228,7 @@ export function applyDisplayOptions(
     dateFilter: DateFilter;
     priorityFilter: PriorityFilter;
     showCompleted: boolean;
+    projectNames?: Record<string, string>;
   }
 ): TaskGroup[] {
   // First apply filters
@@ -239,5 +243,12 @@ export function applyDisplayOptions(
   const sorted = sortTasks(filtered, options.sorting);
 
   // Finally group
-  return groupTasks(sorted, options.grouping);
+  return groupTasks(sorted, options.grouping, options.projectNames);
+}
+
+/**
+ * Flatten grouped tasks back into a single list
+ */
+export function flattenGroups(groups: TaskGroup[]): Task[] {
+  return groups.flatMap((g) => g.tasks);
 }
