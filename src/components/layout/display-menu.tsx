@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   LayoutList,
   LayoutGrid,
   CalendarDays,
   ChevronDown,
-  ChevronUp,
   HelpCircle,
-  ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -19,7 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDisplayOptions } from "@/components/providers/display-provider";
+import {
+  useDisplayOptions,
+  defaultDisplayOptions,
+  isModifiedOptions,
+} from "@/components/providers/display-provider";
 import type {
   LayoutView,
   GroupingOption,
@@ -71,10 +74,12 @@ function CollapsibleSection({
   title,
   children,
   defaultOpen = true,
+  badge,
 }: {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  badge?: number;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -82,14 +87,23 @@ function CollapsibleSection({
     <div className="border-t">
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-foreground hover:bg-accent/50"
       >
-        {title}
-        {isOpen ? (
-          <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-        )}
+        <span className="flex items-center">
+          {title}
+          {badge != null && badge > 0 && (
+            <span className="ml-1.5 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+              {badge}
+            </span>
+          )}
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 text-muted-foreground transition-transform",
+            isOpen && "rotate-180"
+          )}
+        />
       </button>
       {isOpen && <div className="px-3 pb-3 space-y-2">{children}</div>}
     </div>
@@ -99,6 +113,7 @@ function CollapsibleSection({
 export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
   const {
     options,
     setLayout,
@@ -107,10 +122,21 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
     setSorting,
     setDateFilter,
     setPriorityFilter,
+    resetOptions,
   } = useDisplayOptions();
+
+  const isModified = isModifiedOptions(options);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Element | null;
+      if (
+        target &&
+        typeof target.closest === "function" &&
+        target.closest("[data-radix-popper-content-wrapper]")
+      ) {
+        return;
+      }
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
@@ -121,10 +147,30 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        // Let Escape first dismiss an open inner Select (portaled Radix popper)
+        if (document.querySelector("[data-radix-popper-content-wrapper]")) return;
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- closing the menu on route change is intentional
+    setIsOpen(false);
+  }, [pathname]);
+
   return (
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
         className={cn(
           "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
           isOpen
@@ -133,10 +179,13 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
         )}
       >
         {trigger}
+        {isModified && (
+          <span className="h-2 w-2 rounded-full bg-primary ring-2 ring-primary/25" aria-hidden="true" />
+        )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border bg-popover p-0 shadow-lg">
+        <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border bg-popover p-0 shadow-lg animate-in fade-in-0 zoom-in-95 duration-150 max-h-[calc(100vh-4rem)] overflow-y-auto">
           {/* Layout Section */}
           <div className="p-3">
             <div className="mb-2 flex items-center justify-between">
@@ -148,6 +197,8 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
                 <button
                   key={opt.value}
                   onClick={() => setLayout(opt.value)}
+                  aria-pressed={options.layout === opt.value}
+                  title={opt.label}
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-md py-2 text-xs transition-all",
                     options.layout === opt.value
@@ -175,7 +226,16 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
           {/* Sort Section */}
           <CollapsibleSection title="Sort">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Grouping</span>
+              <span
+                className={cn(
+                  "text-xs",
+                  options.grouping !== defaultDisplayOptions.grouping
+                    ? "text-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                Grouping
+              </span>
               <Select
                 value={options.grouping}
                 onValueChange={(v) => setGrouping(v as GroupingOption)}
@@ -193,7 +253,16 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
               </Select>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Sorting</span>
+              <span
+                className={cn(
+                  "text-xs",
+                  options.sorting !== defaultDisplayOptions.sorting
+                    ? "text-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                Sorting
+              </span>
               <Select
                 value={options.sorting}
                 onValueChange={(v) => setSorting(v as SortingOption)}
@@ -213,9 +282,24 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
           </CollapsibleSection>
 
           {/* Filter Section */}
-          <CollapsibleSection title="Filter">
+          <CollapsibleSection
+            title="Filter"
+            badge={
+              (options.dateFilter !== "all" ? 1 : 0) +
+              (options.priorityFilter !== "all" ? 1 : 0)
+            }
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Date</span>
+              <span
+                className={cn(
+                  "text-xs",
+                  options.dateFilter !== defaultDisplayOptions.dateFilter
+                    ? "text-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                Date
+              </span>
               <Select
                 value={options.dateFilter}
                 onValueChange={(v) => setDateFilter(v as DateFilter)}
@@ -233,7 +317,16 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
               </Select>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Priority</span>
+              <span
+                className={cn(
+                  "text-xs",
+                  options.priorityFilter !== defaultDisplayOptions.priorityFilter
+                    ? "text-foreground"
+                    : "text-muted-foreground"
+                )}
+              >
+                Priority
+              </span>
               <Select
                 value={options.priorityFilter}
                 onValueChange={(v) => setPriorityFilter(v as PriorityFilter)}
@@ -251,6 +344,17 @@ export function DisplayMenu({ trigger }: { trigger: React.ReactNode }) {
               </Select>
             </div>
           </CollapsibleSection>
+
+          {isModified && (
+            <div className="border-t px-3 py-2">
+              <button
+                onClick={resetOptions}
+                className="w-full rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              >
+                Reset to defaults
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
