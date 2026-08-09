@@ -125,6 +125,8 @@ export interface Transaction {
   person_id: string | null;
   note: string | null;
   date: string;
+  source: "manual" | "bulk" | "image";
+  attachment_url: string | null;
   created_at: string;
 }
 

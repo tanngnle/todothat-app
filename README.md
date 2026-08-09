@@ -47,7 +47,7 @@ src/
 ├── types/database.ts          # All DB entity types
 └── middleware.ts              # Auth/session handling
 
-supabase/migrations/           # SQL schema migrations (001..004)
+supabase/migrations/           # SQL schema migrations (001..005)
 docs/specs/                    # Feature specs (see docs/specs/README.md)
 ```
 
@@ -66,4 +66,11 @@ docs/specs/                    # Feature specs (see docs/specs/README.md)
 
 ## Database
 
-Run migrations in `supabase/migrations/` in order (001 schema → 002 seed → 003 multi-user → 004 descriptions).
+Run migrations in `supabase/migrations/` in order (001 schema → 002 seed → 003 multi-user → 004 descriptions → 005 finance fix).
+
+## Finance setup
+
+- Apply `supabase/migrations/005_finance_fix.sql` **before** using expenses: all transaction writes require the new `source` column and the wallet balance trigger it adds.
+- Receipt scanning is optional: set `MODELSTUDIO_API_KEY` in `.env.local` to enable it (Alibaba Cloud Model Studio; `MODELSTUDIO_BASE_URL` and `MODELSTUDIO_MODEL` are optional overrides).
+- Node ≥ 22 is required (AI SDK dependencies).
+- Without Supabase env vars the app runs in mock mode, where wallet balances and receipt image upload are inactive.
