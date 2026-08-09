@@ -6,7 +6,8 @@ import type { Task } from "@/types/database";
 
 export async function getTasks(
   projectId?: string,
-  sectionId?: string
+  sectionId?: string,
+  includeCompleted = false
 ): Promise<Task[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,9 +17,12 @@ export async function getTasks(
     .from("tasks")
     .select("*")
     .eq("user_id", user.id)
-    .eq("is_completed", false)
     .is("parent_id", null)
     .order("sort_order", { ascending: true });
+
+  if (!includeCompleted) {
+    query = query.eq("is_completed", false);
+  }
 
   if (projectId) {
     query = query.eq("project_id", projectId);
@@ -48,43 +52,51 @@ export async function getSubTasks(parentId: string): Promise<Task[]> {
   return data || [];
 }
 
-export async function getTodayTasks(): Promise<Task[]> {
+export async function getTodayTasks(includeCompleted = false): Promise<Task[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
   const today = new Date().toISOString().split("T")[0];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("tasks")
     .select("*")
     .eq("user_id", user.id)
-    .eq("is_completed", false)
     .or(`due_date.eq.${today},due_date.lt.${today}`)
     .order("due_date", { ascending: true })
     .order("sort_order", { ascending: true });
 
+  if (!includeCompleted) {
+    query = query.eq("is_completed", false);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data || [];
 }
 
-export async function getUpcomingTasks(): Promise<Task[]> {
+export async function getUpcomingTasks(includeCompleted = false): Promise<Task[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
   const today = new Date().toISOString().split("T")[0];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("tasks")
     .select("*")
     .eq("user_id", user.id)
-    .eq("is_completed", false)
     .gte("due_date", today)
     .not("due_date", "is", null)
     .order("due_date", { ascending: true })
     .order("sort_order", { ascending: true });
 
+  if (!includeCompleted) {
+    query = query.eq("is_completed", false);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data || [];
 }
@@ -128,7 +140,7 @@ export async function createTask(formData: FormData): Promise<void> {
   });
 
   if (error) throw error;
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }
 
 export async function updateTask(
@@ -146,7 +158,7 @@ export async function updateTask(
     .eq("user_id", user.id);
 
   if (error) throw error;
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }
 
 export async function toggleTaskComplete(id: string): Promise<void> {
@@ -199,7 +211,7 @@ export async function toggleTaskComplete(id: string): Promise<void> {
     }
   }
 
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }
 
 export async function deleteTask(id: string): Promise<void> {
@@ -214,7 +226,7 @@ export async function deleteTask(id: string): Promise<void> {
     .eq("user_id", user.id);
 
   if (error) throw error;
-  revalidatePath("/");
+  revalidatePath("/", "layout");
 }
 
 export async function reorderTasks(
@@ -234,5 +246,5 @@ export async function reorderTasks(
   );
 
   await Promise.all(updates);
-  revalidatePath(`/project/${projectId}`, "page");
+  revalidatePath("/", "layout");
 }

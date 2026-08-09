@@ -1,11 +1,15 @@
-import { getInboxProject } from "@/actions/projects";
+import { getInboxProject, getProjects } from "@/actions/projects";
 import { getTasks } from "@/actions/tasks";
-import { TaskList } from "@/components/tasks/task-list";
+import { InboxContent } from "@/components/tasks/inbox-content";
 import { Plus } from "lucide-react";
 
 export default async function InboxPage() {
   const inbox = await getInboxProject();
-  const tasks = inbox ? await getTasks(inbox.id) : [];
+  const tasks = inbox ? await getTasks(inbox.id, undefined, true) : [];
+  const projects = await getProjects();
+  const projectNames = Object.fromEntries(
+    projects.map((p) => [p.id, p.name])
+  );
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 py-8">
@@ -42,7 +46,11 @@ export default async function InboxPage() {
         </div>
       ) : inbox ? (
         <div className="w-full max-w-2xl">
-          <TaskList tasks={tasks} projectId={inbox.id} />
+          <InboxContent
+            tasks={tasks}
+            projectId={inbox.id}
+            projectNames={projectNames}
+          />
         </div>
       ) : null}
     </div>

@@ -1,33 +1,39 @@
 "use client";
 
-import { useState } from "react";
 import { Task } from "@/types/database";
 import { TaskItem } from "./task-item";
 import { useDisplayOptions } from "@/components/providers/display-provider";
+import { groupTasks, type TaskGroup } from "@/lib/utils/task-filters";
 
 interface BoardViewProps {
-  tasks: Task[];
+  tasks?: Task[];
   projectId: string;
   sections?: Array<{ id: string; name: string }>;
+  columns?: TaskGroup[];
+  projectNames?: Record<string, string>;
 }
 
-export function BoardView({ tasks, projectId, sections = [] }: BoardViewProps) {
+export function BoardView({ tasks = [], sections = [], projectNames, columns: explicitColumns }: BoardViewProps) {
   const { options } = useDisplayOptions();
 
-  // Group tasks by section or status
-  const columns = sections.length > 0
-    ? sections.map((section) => ({
-        id: section.id,
-        title: section.name,
-        tasks: tasks.filter((t) => t.section_id === section.id),
-      }))
-    : [
-        {
-          id: "no-section",
-          title: "All Tasks",
-          tasks: tasks,
-        },
-      ];
+  // Group tasks by section or status (or use explicit columns when provided)
+  const columns =
+    explicitColumns ??
+    (options.grouping !== "none"
+      ? groupTasks(tasks, options.grouping, projectNames)
+      : sections.length > 0
+        ? sections.map((section) => ({
+            id: section.id,
+            title: section.name,
+            tasks: tasks.filter((t) => t.section_id === section.id),
+          }))
+        : [
+            {
+              id: "no-section",
+              title: "All Tasks",
+              tasks: tasks,
+            },
+          ]);
 
   return (
     <div className="flex gap-4 overflow-x-auto p-4">

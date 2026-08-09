@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   PanelLeftClose,
@@ -31,7 +32,37 @@ export function TopBar({
   onSearch,
   pageTitle = "Inbox",
 }: TopBarProps) {
+  const pathname = usePathname();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const isTodoRoute =
+    pathname === "/" ||
+    pathname === "/today" ||
+    pathname === "/upcoming" ||
+    pathname === "/labels" ||
+    pathname === "/filters" ||
+    pathname.startsWith("/project");
+
+  const routeTitle =
+    pathname === "/"
+      ? "Inbox"
+      : pathname === "/today"
+        ? "Today"
+        : pathname === "/upcoming"
+          ? "Upcoming"
+          : pathname === "/labels"
+            ? "Labels"
+            : pathname === "/filters"
+              ? "Filters & Labels"
+              : pathname === "/expenses"
+                ? "Expenses"
+                : pathname === "/investments"
+                  ? "Investments"
+                  : pathname.startsWith("/project")
+                    ? "Project"
+                    : null;
+
+  const displayTitle = routeTitle ?? pageTitle;
 
   return (
     <header className="flex h-11 items-center justify-between border-b bg-background px-3">
@@ -71,20 +102,22 @@ export function TopBar({
 
       {/* Center - Page title */}
       <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-bold">
-        {pageTitle}
+        {displayTitle}
       </h1>
 
       {/* Right side */}
       <div className="flex items-center gap-1">
         {/* Display menu */}
-        <DisplayMenu
-          trigger={
-            <>
-              <LayoutList className="h-4 w-4" />
-              <span className="text-sm font-medium">Display</span>
-            </>
-          }
-        />
+        {isTodoRoute && (
+          <DisplayMenu
+            trigger={
+              <>
+                <LayoutList className="h-4 w-4" />
+                <span className="text-sm font-medium">Display</span>
+              </>
+            }
+          />
+        )}
 
         {/* Chat */}
         <button className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">

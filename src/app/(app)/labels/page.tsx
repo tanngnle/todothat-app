@@ -1,11 +1,31 @@
-import { getLabels } from "@/actions/labels";
-import { getTasksByLabel } from "@/actions/labels";
-import { TaskList } from "@/components/tasks/task-list";
-import { Tag, Plus } from "lucide-react";
-import { createLabel, deleteLabel } from "@/actions/labels";
+import { getLabels, getTasksByLabel } from "@/actions/labels";
+import { getProjects } from "@/actions/projects";
+import { SectionedTaskView } from "@/components/tasks/sectioned-task-view";
+import { Tag } from "lucide-react";
 
 export default async function LabelsPage() {
   const labels = await getLabels();
+  const projects = await getProjects();
+  const projectNames = Object.fromEntries(
+    projects.map((p) => [p.id, p.name])
+  );
+
+  const tasksByLabel = await Promise.all(
+    labels.map((label) => getTasksByLabel(label.name, true))
+  );
+
+  const sections = labels.map((label, index) => ({
+    id: label.id,
+    title: label.name,
+    color: label.color,
+    meta: (
+      <span className="text-xs text-muted-foreground">
+        ({tasksByLabel[index].length})
+      </span>
+    ),
+    tasks: tasksByLabel[index],
+    emptyText: "No tasks with this label",
+  }));
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-8">
@@ -27,35 +47,7 @@ export default async function LabelsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {labels.map((label) => (
-            <LabelSection key={label.id} label={label} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-async function LabelSection({ label }: { label: any }) {
-  const tasks = await getTasksByLabel(label.name);
-
-  return (
-    <div>
-      <div className="mb-3 flex items-center gap-2">
-        <span
-          className="inline-block h-3 w-3 rounded-full"
-          style={{ backgroundColor: label.color }}
-        />
-        <h2 className="text-sm font-semibold text-foreground">{label.name}</h2>
-        <span className="text-xs text-muted-foreground">({tasks.length})</span>
-      </div>
-      {tasks.length > 0 ? (
-        <TaskList tasks={tasks} projectId={tasks[0].project_id} />
-      ) : (
-        <p className="py-4 text-center text-sm text-muted-foreground">
-          No tasks with this label
-        </p>
+        <SectionedTaskView sections={sections} projectNames={projectNames} />
       )}
     </div>
   );

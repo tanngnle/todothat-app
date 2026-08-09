@@ -1,10 +1,13 @@
 import { getTodayTasks } from "@/actions/tasks";
+import { getProjects } from "@/actions/projects";
 import { TodayContent } from "@/components/tasks/today-content";
-import { Calendar } from "lucide-react";
-import { isPast, parseISO, isToday } from "date-fns";
 
 export default async function TodayPage() {
-  const tasks = await getTodayTasks();
+  const tasks = await getTodayTasks(true);
+  const projects = await getProjects();
+  const projectNames = Object.fromEntries(
+    projects.map((p) => [p.id, p.name])
+  );
 
   const today = new Date();
   const formatted = today.toLocaleDateString("en-US", {
@@ -13,10 +16,6 @@ export default async function TodayPage() {
     day: "numeric",
   });
 
-  // Group tasks: overdue vs today
-  const overdue = tasks.filter((t) => t.due_date && isPast(parseISO(t.due_date)) && !isToday(parseISO(t.due_date)));
-  const todayTasks = tasks.filter((t) => !t.due_date || isToday(parseISO(t.due_date)));
-
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
       <div className="mb-8">
@@ -24,11 +23,7 @@ export default async function TodayPage() {
         <p className="text-sm text-muted-foreground">{formatted}</p>
       </div>
 
-      <TodayContent
-        tasks={tasks}
-        overdue={overdue}
-        todayTasks={todayTasks}
-      />
+      <TodayContent tasks={tasks} projectNames={projectNames} />
     </div>
   );
 }

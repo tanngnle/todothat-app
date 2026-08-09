@@ -15,7 +15,7 @@ export default async function ProjectPage({
   if (!project) notFound();
 
   const sections = await getSections(id);
-  const tasks = await getTasks(id);
+  const tasks = await getTasks(id, undefined, true);
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
@@ -27,6 +27,7 @@ export default async function ProjectPage({
         projectId={id}
         tasks={tasks}
         sections={sections}
+        projectName={project.name}
       />
     </div>
   );
