@@ -12,6 +12,8 @@ import type {
   ExpenseCategory,
   Person,
   Transaction,
+  InvestmentAccount,
+  InvestmentTransaction,
 } from "@/types/database";
 
 const MOCK_USER_ID = "mock-user-001";
@@ -432,14 +434,21 @@ const mockPeople: Person[] = [
 
 // ─── Transactions ───────────────────────────────────────────
 const mockTransactions: Transaction[] = [
-  { id: "txn-1", user_id: MOCK_USER_ID, type: "income", amount: 25000000, category_id: "cat-salary", wallet_id: "wal-vcb", to_wallet_id: null, person_id: "per-tuntun", note: "August salary", date: "2026-08-01", created_at: "2026-08-01T00:00:00Z" },
-  { id: "txn-2", user_id: MOCK_USER_ID, type: "expense", amount: 150000, category_id: "cat-food-meal", wallet_id: "wal-momo", to_wallet_id: null, person_id: "per-tuntun", note: "Lunch at office", date: "2026-08-05", created_at: "2026-08-05T00:00:00Z" },
-  { id: "txn-3", user_id: MOCK_USER_ID, type: "expense", amount: 45000, category_id: "cat-food-drink", wallet_id: "wal-momo", to_wallet_id: null, person_id: "per-nunu", note: "Coffee with Nunu", date: "2026-08-06", created_at: "2026-08-06T00:00:00Z" },
-  { id: "txn-4", user_id: MOCK_USER_ID, type: "expense", amount: 2000000, category_id: "cat-bills", wallet_id: "wal-vcb", to_wallet_id: null, person_id: "per-tuntun", note: "Monthly internet + phone", date: "2026-08-03", created_at: "2026-08-03T00:00:00Z" },
-  { id: "txn-5", user_id: MOCK_USER_ID, type: "transfer", amount: 5000000, category_id: null, wallet_id: "wal-vcb", to_wallet_id: "wal-tikop", person_id: null, note: "Move to savings", date: "2026-08-02", created_at: "2026-08-02T00:00:00Z" },
-  { id: "txn-6", user_id: MOCK_USER_ID, type: "expense", amount: 350000, category_id: "cat-transport", wallet_id: "wal-cash", to_wallet_id: null, person_id: "per-tuntun", note: "Grab rides this week", date: "2026-08-04", created_at: "2026-08-04T00:00:00Z" },
-  { id: "txn-7", user_id: MOCK_USER_ID, type: "income", amount: 5000000, category_id: "cat-freelance", wallet_id: "wal-vcb", to_wallet_id: null, person_id: "per-tuntun", note: "Freelance project payment", date: "2026-08-07", created_at: "2026-08-07T00:00:00Z" },
+  { id: "txn-1", user_id: MOCK_USER_ID, type: "income", amount: 25000000, category_id: "cat-salary", wallet_id: "wal-vcb", to_wallet_id: null, person_id: "per-tuntun", note: "August salary", date: "2026-08-01", source: "manual", attachment_url: null, created_at: "2026-08-01T00:00:00Z" },
+  { id: "txn-2", user_id: MOCK_USER_ID, type: "expense", amount: 150000, category_id: "cat-food-meal", wallet_id: "wal-momo", to_wallet_id: null, person_id: "per-tuntun", note: "Lunch at office", date: "2026-08-05", source: "manual", attachment_url: null, created_at: "2026-08-05T00:00:00Z" },
+  { id: "txn-3", user_id: MOCK_USER_ID, type: "expense", amount: 45000, category_id: "cat-food-drink", wallet_id: "wal-momo", to_wallet_id: null, person_id: "per-nunu", note: "Coffee with Nunu", date: "2026-08-06", source: "manual", attachment_url: null, created_at: "2026-08-06T00:00:00Z" },
+  { id: "txn-4", user_id: MOCK_USER_ID, type: "expense", amount: 2000000, category_id: "cat-bills", wallet_id: "wal-vcb", to_wallet_id: null, person_id: "per-tuntun", note: "Monthly internet + phone", date: "2026-08-03", source: "manual", attachment_url: null, created_at: "2026-08-03T00:00:00Z" },
+  { id: "txn-5", user_id: MOCK_USER_ID, type: "transfer", amount: 5000000, category_id: null, wallet_id: "wal-vcb", to_wallet_id: "wal-tikop", person_id: null, note: "Move to savings", date: "2026-08-02", source: "manual", attachment_url: null, created_at: "2026-08-02T00:00:00Z" },
+  { id: "txn-6", user_id: MOCK_USER_ID, type: "expense", amount: 350000, category_id: "cat-transport", wallet_id: "wal-cash", to_wallet_id: null, person_id: "per-tuntun", note: "Grab rides this week", date: "2026-08-04", source: "manual", attachment_url: null, created_at: "2026-08-04T00:00:00Z" },
+  { id: "txn-7", user_id: MOCK_USER_ID, type: "income", amount: 5000000, category_id: "cat-freelance", wallet_id: "wal-vcb", to_wallet_id: null, person_id: "per-tuntun", note: "Freelance project payment", date: "2026-08-07", source: "manual", attachment_url: null, created_at: "2026-08-07T00:00:00Z" },
 ];
+
+// ─── Investment Accounts ────────────────────────────────────
+// Starts empty (summary shows 0 until the user creates an account).
+const mockInvestmentAccounts: InvestmentAccount[] = [];
+
+// ─── Investment Transactions ────────────────────────────────
+const mockInvestmentTransactions: InvestmentTransaction[] = [];
 
 // ─── Helper: deep clone ─────────────────────────────────────
 function clone<T>(data: T): T {
@@ -486,13 +495,40 @@ export function createMockClient() {
           case "expense_categories": return mockCategories;
           case "people": return mockPeople;
           case "transactions": return mockTransactions;
+          case "investment_accounts": return mockInvestmentAccounts;
+          case "investment_transactions": return mockInvestmentTransactions;
           default: return [];
         }
+      };
+
+      // Parse a PostgREST-style `.or()` condition string such as
+      // "wallet_id.eq.X,to_wallet_id.eq.X" into a predicate. Supports the
+      // comparison operators used anywhere in this codebase.
+      const parseOrCondition = (condition: string) => {
+        const terms = condition.split(",").map((term) => {
+          const [column, operator, ...rest] = term.split(".");
+          return { column, operator, value: rest.join(".") };
+        });
+        return (item: any) =>
+          terms.some(({ column, operator, value }) => {
+            const cell = item[column];
+            switch (operator) {
+              case "eq": return String(cell) === value;
+              case "neq": return String(cell) !== value;
+              case "lt": return cell !== null && cell !== undefined && cell < value;
+              case "lte": return cell !== null && cell !== undefined && cell <= value;
+              case "gt": return cell !== null && cell !== undefined && cell > value;
+              case "gte": return cell !== null && cell !== undefined && cell >= value;
+              case "is": return value === "null" ? cell === null : cell === value;
+              default: return false;
+            }
+          });
       };
 
       // Build a chainable query that is also thenable
       const createQuery = (): any => {
         let filters: Array<{ key: string; value: any; op: string }> = [];
+        let orPredicates: Array<(item: any) => boolean> = [];
         let orderByField = "";
         let orderByAsc = true;
         let limitCount = 0;
@@ -512,6 +548,12 @@ export function createMockClient() {
             } else if (f.op === "not") {
               result = result.filter((item: any) => item[f.key] !== f.value);
             }
+          }
+
+          // Apply .or() predicates (each call ANDs with other filters,
+          // matching PostgREST semantics).
+          for (const predicate of orPredicates) {
+            result = result.filter(predicate);
           }
 
           // Apply ordering
@@ -544,7 +586,8 @@ export function createMockClient() {
             filters.push({ key, value, op: "is" });
             return query;
           },
-          or: (_condition: string) => {
+          or: (condition: string) => {
+            orPredicates.push(parseOrCondition(condition));
             return query;
           },
           not: (key: string, _operator: string, value: any) => {
@@ -566,13 +609,68 @@ export function createMockClient() {
           },
           single: async () => {
             const result = execute();
-            return { data: result.data.length > 0 ? result.data[0] : null, error: null };
+            if (result.data.length !== 1) {
+              // Mirrors PostgREST PGRST116 so callers that verify the row
+              // actually exists get a real error instead of silent nulls.
+              return {
+                data: null,
+                error: {
+                  message: "JSON object requested, multiple (or no) rows returned",
+                  details: `Results contain ${result.data.length} rows`,
+                  hint: "",
+                  code: "PGRST116",
+                },
+              };
+            }
+            return { data: result.data[0], error: null };
           },
-          insert: async (data: any) => {
+          maybeSingle: async () => {
+            const result = execute();
+            if (result.data.length > 1) {
+              return {
+                data: null,
+                error: {
+                  message: "JSON object requested, multiple (or no) rows returned",
+                  details: `Results contain ${result.data.length} rows`,
+                  hint: "",
+                  code: "PGRST116",
+                },
+              };
+            }
+            return { data: result.data[0] ?? null, error: null };
+          },
+          insert: (data: any) => {
             const store = getStore();
-            const newItem = { ...data, id: `mock-${Date.now()}`, created_at: new Date().toISOString() };
-            store.push(newItem);
-            return { data: clone(newItem), error: null };
+            // Array-aware: supabase-js accepts a single object OR an array
+            // for batch inserts. Push each row as its own record with a
+            // unique id/created_at — spreading an array would otherwise
+            // produce a malformed `{0: row0, ...}` object.
+            const rows: any[] = Array.isArray(data) ? data : [data];
+            const newItems = rows.map((row: any) => {
+              const newItem = { ...row, id: genId(), created_at: new Date().toISOString() };
+              store.push(newItem);
+              return newItem;
+            });
+            // Chainable like supabase-js: `.insert(...).select().single()`.
+            const insertChain: any = {
+              select: (_fields: string = "*") => insertChain,
+              single: async () => {
+                if (newItems.length !== 1) {
+                  return {
+                    data: null,
+                    error: {
+                      message: "JSON object requested, multiple (or no) rows returned",
+                      details: `Results contain ${newItems.length} rows`,
+                      hint: "",
+                      code: "PGRST116",
+                    },
+                  };
+                }
+                return { data: clone(newItems[0]), error: null };
+              },
+              then: (resolve: any) => resolve({ data: clone(newItems), error: null }),
+            };
+            return insertChain;
           },
           update: (data: any) => {
             const updateFilters: Array<{ key: string; value: any }> = [];

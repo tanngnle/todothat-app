@@ -2,9 +2,22 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createMockClient } from "@/lib/mock-db";
 
+/**
+ * Resolve the public Supabase API key. The new publishable key
+ * (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `sb_publishable_...`) takes
+ * precedence; the legacy anon key name is kept as a fallback so existing
+ * deployments keep working unchanged.
+ */
+function getSupabaseKey(): string | undefined {
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
 function isSupabaseConfigured(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = getSupabaseKey();
   return Boolean(
     url &&
     key &&
@@ -23,7 +36,7 @@ export async function createClient() {
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseKey()!,
     {
       cookies: {
         getAll() {

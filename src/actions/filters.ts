@@ -29,7 +29,9 @@ export async function getFilter(id: string): Promise<Filter | null> {
     .select("*")
     .eq("id", id)
     .eq("user_id", user.id)
-    .single();
+    // maybeSingle: a missing id should resolve to null (our `| null`
+    // contract) instead of throwing PGRST116.
+    .maybeSingle();
 
   if (error) throw error;
   return data;

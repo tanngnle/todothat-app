@@ -29,7 +29,10 @@ export async function getLabel(id: string): Promise<Label | null> {
     .select("*")
     .eq("id", id)
     .eq("user_id", user.id)
-    .single();
+    // maybeSingle: a missing id should resolve to null (our `| null`
+    // contract) instead of throwing PGRST116; real-Supabase behavior is
+    // identical for 0 or 1 matching rows.
+    .maybeSingle();
 
   if (error) throw error;
   return data;

@@ -8,9 +8,9 @@ export function convertToCSV(data: any[], columns: string[]): string {
     columns
       .map((col) => {
         const value = row[col];
-        // Escape quotes and wrap in quotes if contains comma
-        const escaped = String(value || "").replace(/"/g, '""');
-        return escaped.includes(",") ? `"${escaped}"` : escaped;
+        // Escape quotes and wrap in quotes if contains comma, quote or newline
+        const escaped = String(value ?? "").replace(/"/g, '""');
+        return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
       })
       .join(",")
   );
@@ -102,7 +102,7 @@ export function exportExpensesToCSV(
 
   const csvData = transactions.map((txn) => ({
     ...txn,
-    amount: txn.amount / 100, // Convert from cents to dollars
+    amount: txn.amount, // Integer VND — no cents conversion
     type: txn.type.charAt(0).toUpperCase() + txn.type.slice(1),
   }));
 
