@@ -5,7 +5,13 @@ import { Tag, Plus } from "lucide-react";
 import { createLabel, deleteLabel } from "@/actions/labels";
 
 export default async function LabelsPage() {
-  const labels = await getLabels();
+  // A fetch failure should render the empty state, not a 500.
+  let labels: any[] = [];
+  try {
+    labels = await getLabels();
+  } catch {
+    // Missing DB / fetch error: render the empty state below.
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-8">
@@ -38,7 +44,12 @@ export default async function LabelsPage() {
 }
 
 async function LabelSection({ label }: { label: any }) {
-  const tasks = await getTasksByLabel(label.name);
+  let tasks: any[] = [];
+  try {
+    tasks = await getTasksByLabel(label.name);
+  } catch {
+    // Missing DB / fetch error: render as no tasks.
+  }
 
   return (
     <div>

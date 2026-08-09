@@ -142,12 +142,17 @@ export async function reorderProjects(
   revalidatePath("/");
 }
 
-export async function createInboxProject(): Promise<void> {
+/**
+ * Resolve the user's Inbox project id, auto-creating it on first use.
+ * Fresh databases have no seeded Inbox, so any flow that needs a
+ * default project (Quick Add, Inbox page) must go through this instead
+ * of assuming a known id exists.
+ */
+export async function ensureInboxProject(): Promise<string> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // Check if inbox already exists
   const { data: existing } = await supabase
     .from("projects")
     .select("id")
@@ -155,16 +160,37 @@ export async function createInboxProject(): Promise<void> {
     .eq("is_inbox", true)
     .limit(1);
 
-  if (existing && existing.length > 0) return;
+  if (existing && existing.length > 0) return existing[0].id;
 
-  const { error } = await supabase.from("projects").insert({
-    user_id: user.id,
-    name: "Inbox",
-    is_inbox: true,
-    sort_order: 0,
-    icon: "📥",
-  });
+  const { data: created, error } = await supabase
+    .from("projects")
+    .insert({
+      user_id: user.id,
+      name: "Inbox",
+      is_inbox: true,
+      sort_order: 0,
+      icon: "📥",
+    })
+    .select("id")
+    .single();
 
-  if (error) throw error;
+  if (error) {
+    // A concurrent request may have created the inbox between our check
+    // and insert — re-read before surfacing the error.
+    const { data: retry } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_inbox", true)
+      .limit(1);
+    if (retry && retry.length > 0) return retry[0].id;
+    throw error;
+  }
+
   revalidatePath("/");
+  return created.id;
+}
+
+export async function createInboxProject(): Promise<void> {
+  await ensureInboxProject();
 }

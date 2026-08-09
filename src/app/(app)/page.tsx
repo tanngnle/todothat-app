@@ -1,15 +1,24 @@
-import { getInboxProject } from "@/actions/projects";
+import { ensureInboxProject } from "@/actions/projects";
 import { getTasks } from "@/actions/tasks";
 import { TaskList } from "@/components/tasks/task-list";
 import { Plus } from "lucide-react";
+import type { Task } from "@/types/database";
 
 export default async function InboxPage() {
-  const inbox = await getInboxProject();
-  const tasks = inbox ? await getTasks(inbox.id) : [];
+  // Resolve (and auto-create) the real Inbox project. A fetch failure
+  // falls through to the empty state instead of throwing a 500.
+  let inboxId: string | null = null;
+  let tasks: Task[] = [];
+  try {
+    inboxId = await ensureInboxProject();
+    tasks = await getTasks(inboxId);
+  } catch {
+    // Missing DB / fetch error: render the empty state below.
+  }
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 py-8">
-      {tasks.length === 0 && !inbox ? (
+      {!inboxId ? (
         <div className="flex max-w-md flex-col items-center text-center">
           <div className="mb-6 relative">
             <div className="h-40 w-40 rounded-2xl bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 flex items-center justify-center">
@@ -40,11 +49,11 @@ export default async function InboxPage() {
             Add task
           </button>
         </div>
-      ) : inbox ? (
+      ) : (
         <div className="w-full max-w-2xl">
-          <TaskList tasks={tasks} projectId={inbox.id} />
+          <TaskList tasks={tasks} projectId={inboxId} />
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

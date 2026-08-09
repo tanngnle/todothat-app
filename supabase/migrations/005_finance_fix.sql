@@ -184,7 +184,7 @@ BEGIN
        )
        FROM transactions t
        WHERE t.wallet_id = w.id OR t.to_wallet_id = w.id
-     ), 0), 0);
+     ), 0);
 END;
 $$;
 

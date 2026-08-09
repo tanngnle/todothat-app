@@ -4,11 +4,22 @@ import { getProjects } from "@/actions/projects";
 import { TaskList } from "@/components/tasks/task-list";
 import { parseFilterQuery, applyFilter } from "@/lib/utils/filter-parser";
 import { Filter } from "lucide-react";
+import type { Filter as FilterRow, Project, Task } from "@/types/database";
 
 export default async function FiltersPage() {
-  const filters = await getFilters();
-  const allTasks = await getTasks();
-  const projects = await getProjects();
+  // A fetch failure should render the empty state, not a 500.
+  let filters: FilterRow[] = [];
+  let allTasks: Task[] = [];
+  let projects: Project[] = [];
+  try {
+    [filters, allTasks, projects] = await Promise.all([
+      getFilters(),
+      getTasks(),
+      getProjects(),
+    ]);
+  } catch {
+    // Missing DB / fetch error: render the empty state below.
+  }
   const today = new Date().toISOString().split("T")[0];
 
   // Enrich tasks with project names for #project filter

@@ -2,9 +2,16 @@ import { getTodayTasks } from "@/actions/tasks";
 import { TodayContent } from "@/components/tasks/today-content";
 import { Calendar } from "lucide-react";
 import { isPast, parseISO, isToday } from "date-fns";
+import type { Task } from "@/types/database";
 
 export default async function TodayPage() {
-  const tasks = await getTodayTasks();
+  // A fetch failure should render the empty page, not a 500.
+  let tasks: Task[] = [];
+  try {
+    tasks = await getTodayTasks();
+  } catch {
+    // Missing DB / fetch error: render with an empty task list.
+  }
 
   const today = new Date();
   const formatted = today.toLocaleDateString("en-US", {
