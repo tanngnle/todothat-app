@@ -28,6 +28,7 @@ Each spec should contain:
 | Spec | Description |
 |------|-------------|
 | [001-repo-navigation-docs-worktrees](001-repo-navigation-docs-worktrees.md) | Repo navigation README, docs home, git worktrees, first feature commit |
+| [002-interactive-display-options](002-interactive-display-options.md) | Display Options: stay-open menu, unified TaskView renderer, grouping for List+Board, options applied on all Todo pages, real completed-toggle, persistence |
 
 ## Related Documentation
 
