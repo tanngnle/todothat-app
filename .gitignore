@@ -48,3 +48,6 @@ next-env.d.ts
 
 # stray temp artifacts
 __diff_temp.txt
+
+.vercel
+.env*

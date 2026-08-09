@@ -1,19 +1,33 @@
-import { getInboxProject, getProjects } from "@/actions/projects";
+import { ensureInboxProject, getProjects } from "@/actions/projects";
 import { getTasks } from "@/actions/tasks";
 import { InboxContent } from "@/components/tasks/inbox-content";
 import { Plus } from "lucide-react";
+import type { Task } from "@/types/database";
 
 export default async function InboxPage() {
-  const inbox = await getInboxProject();
-  const tasks = inbox ? await getTasks(inbox.id, undefined, true) : [];
-  const projects = await getProjects();
-  const projectNames = Object.fromEntries(
-    projects.map((p) => [p.id, p.name])
-  );
+  // Resolve (and auto-create) the real Inbox project. A fetch failure
+  // falls through to the hero empty state instead of throwing a 500.
+  let inboxId: string | null = null;
+  let tasks: Task[] = [];
+  let projectNames: Record<string, string> = {};
+  try {
+    inboxId = await ensureInboxProject();
+    const [taskRows, projects] = await Promise.all([
+      getTasks(inboxId, undefined, true),
+      getProjects(),
+    ]);
+    tasks = taskRows;
+    projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+  } catch {
+    // Missing DB / fetch error: render the empty state below.
+    inboxId = null;
+    tasks = [];
+    projectNames = {};
+  }
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 py-8">
-      {tasks.length === 0 && !inbox ? (
+      {tasks.length === 0 && !inboxId ? (
         <div className="flex max-w-md flex-col items-center text-center">
           <div className="mb-6 relative">
             <div className="h-40 w-40 rounded-2xl bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 flex items-center justify-center">
@@ -44,11 +58,11 @@ export default async function InboxPage() {
             Add task
           </button>
         </div>
-      ) : inbox ? (
+      ) : inboxId ? (
         <div className="w-full max-w-2xl">
           <InboxContent
             tasks={tasks}
-            projectId={inbox.id}
+            projectId={inboxId}
             projectNames={projectNames}
           />
         </div>

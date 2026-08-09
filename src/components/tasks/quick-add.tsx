@@ -5,13 +5,14 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createTask } from "@/actions/tasks";
+import { ensureInboxProject } from "@/actions/projects";
 
 interface QuickAddProps {
   projectId?: string;
   onClose?: () => void;
 }
 
-export function QuickAdd({ projectId = "proj-inbox", onClose }: QuickAddProps) {
+export function QuickAdd({ projectId, onClose }: QuickAddProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,9 +56,13 @@ export function QuickAdd({ projectId = "proj-inbox", onClose }: QuickAddProps) {
 
     setIsSubmitting(true);
     try {
+      // No explicit project (e.g. global FAB) → resolve the real Inbox
+      // project, auto-creating it on fresh databases.
+      const resolvedProjectId = projectId ?? (await ensureInboxProject());
+
       const formData = new FormData();
       formData.set("content", content.trim());
-      formData.set("project_id", projectId);
+      formData.set("project_id", resolvedProjectId);
       formData.set("priority", "1");
 
       await createTask(formData);

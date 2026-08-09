@@ -2,16 +2,26 @@ import { getLabels, getTasksByLabel } from "@/actions/labels";
 import { getProjects } from "@/actions/projects";
 import { SectionedTaskView } from "@/components/tasks/sectioned-task-view";
 import { Tag } from "lucide-react";
+import type { Label, Project, Task } from "@/types/database";
 
 export default async function LabelsPage() {
-  const labels = await getLabels();
-  const projects = await getProjects();
+  // A fetch failure should render the empty state, not a 500.
+  let labels: Label[] = [];
+  let projects: Project[] = [];
+  let tasksByLabel: Task[][] = [];
+  try {
+    [labels, projects] = await Promise.all([getLabels(), getProjects()]);
+    tasksByLabel = await Promise.all(
+      labels.map((label) => getTasksByLabel(label.name, true))
+    );
+  } catch {
+    // Missing DB / fetch error: render the empty state below.
+    labels = [];
+    projects = [];
+    tasksByLabel = [];
+  }
   const projectNames = Object.fromEntries(
     projects.map((p) => [p.id, p.name])
-  );
-
-  const tasksByLabel = await Promise.all(
-    labels.map((label) => getTasksByLabel(label.name, true))
   );
 
   const sections = labels.map((label, index) => ({
