@@ -5,6 +5,15 @@ _(Hướng dẫn từng bước để chạy ứng dụng cục bộ và triển
 
 **Stack:** Next.js 16.3.0 (App Router, React 19) · Supabase (Postgres + Auth + Storage) · Alibaba Cloud Model Studio (optional, receipt scanning).
 
+**Current production state:**
+
+| | |
+|---|---|
+| Live URL | <https://todoist-app-nu.vercel.app> |
+| Vercel project | `todoist-app` (deployed via the Vercel CLI; GitHub import: `tanngnle/todothat-app`, app at repo root, branch `main`) |
+| Supabase project | `todothat-app` — ref `poekkjstluqofsvvjwol`, region `ap-south-1` |
+| Migrations applied | 001, 003, 004, 005, 006, 007 (002 intentionally skipped — see 1.3) |
+
 ---
 
 ## Table of Contents
@@ -47,20 +56,27 @@ In the Supabase dashboard: **Project Settings → API** (or **Data API**).
 
 ### 1.3 Apply database migrations — Chạy migrations
 
-Migrations live in `supabase/migrations/` and **must be applied in order**:
+Migrations live in `supabase/migrations/` and **must be applied in order** (never edit an applied migration — add new ones as `008_*.sql` onward):
 
 | # | File | What it does |
 |---|---|---|
 | 001 | `001_initial_schema.sql` | Core tables (tasks, projects, wallets, transactions…) + RLS |
-| 002 | `002_seed_data.sql` | Seed/reference data |
-| 003 | `003_multi_user_collaboration.sql` | Multi-user collaboration support |
+| 002 | `002_seed_data.sql` | Seed/reference data — **intentionally skipped on real databases** (see note below) |
+| 003 | `003_multi_user_collaboration.sql` | Multi-user collaboration: project members + roles, shared-access RLS policies |
 | 004 | `004_project_section_descriptions.sql` | Description fields |
 | 005 | `005_finance_fix.sql` | Wallet balance trigger, `transactions.source`/`attachment_url`, `wallets.opening_balance`, `reconcile_wallet_balances()`, **creates the private `receipts` storage bucket + per-user policies** |
+| 006 | `006_project_insert_policy.sql` | Fixes RLS policy recursion cycles introduced by 003's shared-access policies (SECURITY DEFINER helpers) |
+| 007 | `007_break_policy_cycles.sql` | Completes breaking the remaining RLS policy cycles from 003 |
+
+> ⚠️ **Migration 002 is not applied to real databases:** its seed rows require a
+> per-user `user_id`. Wallets, categories, and people are created per user through
+> the **Manage** UI instead. Production order is therefore
+> `001 → 003 → 004 → 005 → 006 → 007`.
 
 **Option A — SQL editor (simplest, không cần cài gì):**
 
 1. Dashboard → **SQL Editor → New query**.
-2. Open each file `001` → `002` → `003` → `004` → `005` locally, paste the contents, click **Run**.
+2. Open each file `001` → `003` → `004` → `005` → `006` → `007` locally, paste the contents, click **Run**.
 3. Repeat in order; check each run reports success before moving on.
 
 **Option B — Supabase CLI (recommended for repeat deploys):**
@@ -194,18 +210,25 @@ runtime satisfies this; if your account is pinned to an older runtime, set
 Click **Deploy**. When the build finishes, open the assigned `*.vercel.app`
 domain. You should land on the login page.
 
-**Alternative: Vercel CLI**
+**Alternative: Vercel CLI (how production is actually deployed)**
 
 ```bash
 npx vercel          # first time: link/create the project, set env vars when prompted
 npx vercel --prod   # promote to production
 ```
 
+The live deployment is Vercel project **`todoist-app`** →
+<https://todoist-app-nu.vercel.app>, pushed from the `main` branch of
+`tanngnle/todothat-app` with the Vercel CLI.
+
 ---
 
 ## 5. Post-deploy verification checklist — Kiểm tra sau khi deploy
 
-Run through these on the deployed URL (và cả local nếu muốn):
+Run through these on the deployed URL (và cả local nếu muốn). Production QA
+uses a dedicated test account; its credentials are managed outside this repo
+(ask the project owner — never commit passwords). The full production E2E pass
+(tasks + finance) has already been completed against this deployment.
 
 | # | Check | Expected result |
 |---|---|---|
