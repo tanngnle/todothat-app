@@ -18,8 +18,10 @@ export default async function InboxPage() {
     ]);
     tasks = taskRows;
     projectNames = Object.fromEntries(projects.map((p) => [p.id, p.name]));
-  } catch {
-    // Missing DB / fetch error: render the empty state below.
+  } catch (err) {
+    // Missing DB / fetch error: render the empty state below. Log the
+    // failure so it is diagnosable in function logs instead of silent.
+    console.error("Inbox bootstrap failed:", err);
     inboxId = null;
     tasks = [];
     projectNames = {};
